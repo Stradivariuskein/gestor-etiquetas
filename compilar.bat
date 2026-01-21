@@ -1,0 +1,1 @@
+pyinstaller --noconsole --onedir --add-data "LOGO_LUQUE.png;." --collect-submodules fitz --name "GestorEtiquetas" main.pyw
