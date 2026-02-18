@@ -41,6 +41,9 @@ class EtiquetaManager:
         if carpeta:
             medida_pat_1 = medida.lower().split("x")[0].replace("/","-").strip()
             new_carpeta = f"{carpeta}\\{medida_pat_1}"
+        else:
+            new_carpeta = articulo
+
         nueva = Etiqueta(articulo=articulo, medida=medida, cantidad=cantidad, carpeta=new_carpeta)
         self.session.add(nueva)
         self.session.commit()
