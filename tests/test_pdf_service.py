@@ -38,6 +38,7 @@ class TestEtiquetaPDFService(unittest.TestCase):
         self.assertEqual(l1, "ARANDELA PLANA")
         self.assertEqual(l2, "HIERRO ZINCADA")
 
+
     def test_partir_en_dos_lineas_impar(self):
         """Prueba con número impar de palabras."""
         texto = "TUERCA GIGANTE ROJA" # 3 palabras
@@ -83,9 +84,9 @@ class TestEtiquetaPDFService(unittest.TestCase):
     # 3. TEST DE INTERACCIÓN CON EL SISTEMA (Mocks)
     # ----------------------------------------------------------------
 
-    @patch('etiqueta_pdf_service.canvas.Canvas') # Mockeamos ReportLab
-    @patch('etiqueta_pdf_service.ImageReader')   # Mockeamos la lectura de imagen
-    def test_crear_pdf_no_falla(self, mock_image_reader, mock_canvas):
+    @patch("etiqueta_pdf_service.ImageReader")
+    @patch("etiqueta_pdf_service.canvas.Canvas")
+    def test_crear_pdf_no_falla(self, mock_canvas, mock_image_reader):
         """Simula la creación de un PDF sin escribir en disco."""
         
         # Configurar mocks
@@ -96,6 +97,7 @@ class TestEtiquetaPDFService(unittest.TestCase):
         etiqueta_mock.medida = "10MM"
         etiqueta_mock.cantidad = 50
         etiqueta_mock.carpeta = "TEST"
+        etiqueta_mock.tipo = "vertical"   # 👈 ESTO FALTABA
 
         ruta_generada = self.service.crear_pdf_etiqueta(etiqueta_mock)
 

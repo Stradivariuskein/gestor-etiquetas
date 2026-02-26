@@ -2,7 +2,6 @@ from sqlalchemy import create_engine, Column, Integer, String, or_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-
 # --- CONFIGURACIÓN INICIAL ---
 Base = declarative_base()
 
@@ -15,9 +14,10 @@ class Etiqueta(Base):
     articulo = Column(String)
     medida = Column(String)
     cantidad = Column(Integer)
+    tipo = Column(String, default="vertical") # NUEVO CAMPO
 
     def __repr__(self):
-        return f"ID: {self.id} | Art: {self.articulo} | Med: {self.medida} | Cant: {self.cantidad}"
+        return f"ID: {self.id} | Art: {self.articulo} | Med: {self.medida} | Cant: {self.cantidad} | Tipo: {self.tipo}"
 
 # --- CLASE DE GESTIÓN (INTERFAZ) ---
 class EtiquetaManager:
@@ -35,8 +35,8 @@ class EtiquetaManager:
         return self.session.query(Etiqueta).all()
 
     # 2. CREAR
-    def crear(self, articulo, medida, cantidad, carpeta=""):
-        """Crea y guarda una nueva etiqueta."""
+    def crear(self, articulo, medida, cantidad, carpeta="", tipo="vertical"):
+        """Crea y guarda una nueva etiqueta. 'tipo' por defecto es 'vertical'."""
         print("creando etiqueta")#borrar
         if carpeta:
             medida_pat_1 = medida.lower().split("x")[0].replace("/","-").strip()
@@ -44,32 +44,41 @@ class EtiquetaManager:
         else:
             new_carpeta = articulo
 
-        nueva = Etiqueta(articulo=articulo, medida=medida, cantidad=cantidad, carpeta=new_carpeta)
+        # Pasamos el campo 'tipo' al instanciar
+        nueva = Etiqueta(
+            articulo=articulo, 
+            medida=medida, 
+            cantidad=cantidad, 
+            carpeta=new_carpeta, 
+            tipo=tipo
+        )
         self.session.add(nueva)
         self.session.commit()
         return nueva
 
     # 3. BUSCAR
     def buscar_por_texto(self, termino):
-        """Busca coincidencias en artículo, medida o carpeta (path)."""
+        """Busca coincidencias en artículo, medida, carpeta o tipo."""
         print("buscando etiqueta")#borrar
         termino_search = f"%{termino}%"
         return self.session.query(Etiqueta).filter(
             or_(
                 Etiqueta.articulo.like(termino_search),
                 Etiqueta.medida.like(termino_search),
-                Etiqueta.carpeta.like(termino_search)  # Nueva condición para el path
+                Etiqueta.carpeta.like(termino_search),
+                Etiqueta.tipo.like(termino_search)  # Agregado para poder buscar por "horizontal" o "vertical"
             )
         ).all()
 
     def obtener_por_id(self, etiqueta_id):
         """Busca una etiqueta específica por su ID usando el estilo SQLAlchemy 2.0."""
         return self.session.get(Etiqueta, etiqueta_id)
+
     # 4. MODIFICAR
     def modificar(self, etiqueta_id, **kwargs):
         """
         Modifica campos específicos. 
-        Uso: manager.modificar(1, cantidad=500, medida='1/2')
+        Uso: manager.modificar(1, cantidad=500, medida='1/2', tipo='horizontal')
         """
         etiqueta = self.obtener_por_id(etiqueta_id)
         if etiqueta:
@@ -98,23 +107,20 @@ class EtiquetaManager:
 if __name__ == "__main__":
     manager = EtiquetaManager()
 
-    print("--- 1. Creando una etiqueta de prueba ---")
-    nueva_etiqueta = manager.crear("ARANDELAS CHAPISTA", "3/4", 5, "ARANDELAS/CHAPISTA")
+    print("--- 1. Creando etiquetas de prueba ---")
+    # Etiqueta clásica (toma "vertical" por defecto)
+    e_vertical = manager.crear("ARANDELAS CHAPISTA", "3/4", 5, "ARANDELAS/CHAPISTA")
+    # Etiqueta nueva (especificamos "horizontal")
+    e_horizontal = manager.crear("TARUGO NYLON", "N° 5 C/T", 1000, "TARUGOS", tipo="horizontal")
 
     print("\n--- 2. Listando todas las etiquetas ---")
-    for e in manager.listar_todas()[:5]: # Mostramos las primeras 5
+    for e in manager.listar_todas()[:5]:
         print(e)
 
-    print("\n--- 3. Buscando 'WHITWORTH' ---")
-    resultados = manager.buscar_por_texto("WHITWORTH")
-    for r in resultados:
-        print(r)
+    print(f"\n--- 3. Modificando a horizontal la etiqueta ID {e_vertical.id} ---")
+    if manager.modificar(e_vertical.id, tipo="horizontal"):
+        print("Modificado con éxito:", manager.obtener_por_id(e_vertical.id))
 
-    print(f"\n--- 4. Modificando cantidad de la etiqueta ID {nueva_etiqueta.id} ---")
-    if manager.modificar(nueva_etiqueta.id, cantidad=999):
-        print("Modificado con éxito:", manager.obtener_por_id(nueva_etiqueta.id))
-
-    print(f"\n--- 5. Eliminando la etiqueta ID {nueva_etiqueta.id} ---")
-    if manager.eliminar(nueva_etiqueta.id):
-        print(f"Etiqueta ID {nueva_etiqueta.id} eliminada.")
-
+    print(f"\n--- 4. Eliminando etiquetas de prueba ---")
+    manager.eliminar(e_vertical.id)
+    manager.eliminar(e_horizontal.id)

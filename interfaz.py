@@ -70,29 +70,39 @@ class VisualizadorPDF:
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo renderizar el PDF: {e}")
             self.top.destroy()
+import tkinter as tk
+from tkinter import ttk, messagebox
 
-class VentanaNueva:
+class VentanaNueva: #VentanaCrear
     """Ventana emergente para crear una nueva etiqueta y su PDF"""
     def __init__(self, parent, callback_actualizar):
         self.top = tk.Toplevel(parent)
         self.top.title("Nueva Etiqueta")
-        self.top.geometry("350x380")
+        self.top.geometry("350x450")
         self.top.configure(bg="#f2f2f2")
         self.top.grab_set()
 
         self.callback_actualizar = callback_actualizar
-        # Inicializamos el servicio de PDF
         self.pdf_service = EtiquetaPDFService()
 
         main_frame = tk.Frame(self.top, bg="#f2f2f2", padx=20, pady=20)
         main_frame.pack(fill="both", expand=True)
 
-        # Campos del formulario
-        self._crear_campo(main_frame, "Carpeta / Tipo:", "carpeta", "")
+        # --- CAMPOS DEL FORMULARIO ---
+        self._crear_campo(main_frame, "Carpeta:", "carpeta", "")
+        
+        # CAMPO TIPO (Select Box / Combobox)
+        tk.Label(main_frame, text="Tipo:", bg="#f2f2f2", font=("Segoe UI", 9)).pack(anchor="w")
+        self.combo_tipo = ttk.Combobox(main_frame, font=("Segoe UI", 10), state="readonly")
+        self.combo_tipo['values'] = ("Vertical", "Horizontal")
+        self.combo_tipo.set("Vertical") # Opción por defecto
+        self.combo_tipo.pack(fill="x", pady=(0, 10))
+        
         self._crear_campo(main_frame, "Artículo:", "articulo", "")
         self._crear_campo(main_frame, "Medida:", "medida", "")
         self._crear_campo(main_frame, "Cantidad:", "cantidad", "0")
 
+        # --- BOTONES ---
         btns_frame = tk.Frame(main_frame, bg="#f2f2f2")
         btns_frame.pack(fill="x", pady=(20, 0))
 
@@ -112,8 +122,10 @@ class VentanaNueva:
         setattr(self, f"entry_{attr_name}", ent)
 
     def guardar(self):
+        """Crea, guarda la etiqueta en la db y genera el pdf"""
         articulo = self.entry_articulo.get().strip()
         carpeta = self.entry_carpeta.get().strip()
+        tipo = self.combo_tipo.get() # <-- Obtiene el valor del Select Box
         medida = self.entry_medida.get().strip()
         cantidad = self.entry_cantidad.get().strip()
         
@@ -123,6 +135,7 @@ class VentanaNueva:
 
         datos = {
             "carpeta": carpeta,
+            "tipo": tipo,
             "articulo": articulo,
             "medida": medida,
             "cantidad": cantidad
@@ -130,15 +143,11 @@ class VentanaNueva:
 
         manager = EtiquetaManager()
         try:
-            # 1. Guardar en Base de Datos
-            nueva_etiqueta = manager.crear(**datos) # Asumimos que manager.crear devuelve el objeto creado
+            nueva_etiqueta = manager.crear(**datos)
             
             if nueva_etiqueta:
-                # 2. Generar el PDF usando el servicio
-                # El servicio espera un objeto que tenga .articulo, .medida, etc.
                 ruta_pdf = self.pdf_service.crear_pdf_etiqueta(nueva_etiqueta)
                 
-                # 3. Mensaje de confirmación final
                 messagebox.showinfo("Éxito", 
                     f"Etiqueta guardada en DB.\n\nPDF generado en:\n{ruta_pdf}")
                 
@@ -152,12 +161,94 @@ class VentanaNueva:
         finally:
             manager.cerrar()
 
+# class VentanaNueva: #VentanaCrear
+#     """Ventana emergente para crear una nueva etiqueta y su PDF"""
+#     def __init__(self, parent, callback_actualizar):
+#         self.top = tk.Toplevel(parent)
+#         self.top.title("Nueva Etiqueta")
+#         self.top.geometry("350x380")
+#         self.top.configure(bg="#f2f2f2")
+#         self.top.grab_set()
+
+#         self.callback_actualizar = callback_actualizar
+#         # Inicializamos el servicio de PDF
+#         self.pdf_service = EtiquetaPDFService()
+
+#         main_frame = tk.Frame(self.top, bg="#f2f2f2", padx=20, pady=20)
+#         main_frame.pack(fill="both", expand=True)
+
+#         # Campos del formulario
+#         self._crear_campo(main_frame, "Carpeta / Tipo:", "carpeta", "")
+#         self._crear_campo(main_frame, "Artículo:", "articulo", "")
+#         self._crear_campo(main_frame, "Medida:", "medida", "")
+#         self._crear_campo(main_frame, "Cantidad:", "cantidad", "0")
+
+#         btns_frame = tk.Frame(main_frame, bg="#f2f2f2")
+#         btns_frame.pack(fill="x", pady=(20, 0))
+
+#         tk.Button(btns_frame, text="CREAR Y GENERAR PDF", bg="#27ae60", fg="white", 
+#                   font=("Segoe UI", 9, "bold"), relief="flat", padx=15, 
+#                   command=self.guardar).pack(side="left")
+        
+#         tk.Button(btns_frame, text="CANCELAR", bg="#7f8c8d", fg="white", 
+#                   font=("Segoe UI", 9, "bold"), relief="flat", padx=15, 
+#                   command=self.top.destroy).pack(side="right")
+
+#     def _crear_campo(self, parent, label_text, attr_name, valor_inicial):
+#         tk.Label(parent, text=label_text, bg="#f2f2f2", font=("Segoe UI", 9)).pack(anchor="w")
+#         ent = tk.Entry(parent, font=("Segoe UI", 10))
+#         ent.insert(0, str(valor_inicial))
+#         ent.pack(fill="x", pady=(0, 10))
+#         setattr(self, f"entry_{attr_name}", ent)
+
+#     def guardar(self):
+#         """crea, guarda la etiqueta en la db y genera el pdf"""
+#         articulo = self.entry_articulo.get().strip()
+#         carpeta = self.entry_carpeta.get().strip()
+#         medida = self.entry_medida.get().strip()
+#         cantidad = self.entry_cantidad.get().strip()
+        
+#         if not articulo or not carpeta:
+#             messagebox.showwarning("Error", "Los campos Carpeta y Artículo son obligatorios")
+#             return
+
+#         datos = {
+#             "carpeta": carpeta,
+#             "articulo": articulo,
+#             "medida": medida,
+#             "cantidad": cantidad
+#         }
+
+#         manager = EtiquetaManager()
+#         try:
+#             # 1. Guardar en Base de Datos
+#             nueva_etiqueta = manager.crear(**datos) # Asumimos que manager.crear devuelve el objeto creado
+            
+#             if nueva_etiqueta:
+#                 # 2. Generar el PDF usando el servicio
+#                 # El servicio espera un objeto que tenga .articulo, .medida, etc.
+#                 ruta_pdf = self.pdf_service.crear_pdf_etiqueta(nueva_etiqueta)
+                
+#                 # 3. Mensaje de confirmación final
+#                 messagebox.showinfo("Éxito", 
+#                     f"Etiqueta guardada en DB.\n\nPDF generado en:\n{ruta_pdf}")
+                
+#                 self.callback_actualizar() 
+#                 self.top.destroy()
+#             else:
+#                 messagebox.showerror("Error", "No se pudo insertar en la base de datos.")
+
+#         except Exception as e:
+#             messagebox.showerror("Error", f"Ocurrió un error: {e}")
+#         finally:
+#             manager.cerrar()
+
 class VentanaEditar:
     """Ventana emergente para editar los detalles de una etiqueta"""
     def __init__(self, parent, etiqueta_obj, callback_actualizar):
         self.top = tk.Toplevel(parent)
         self.top.title("Editar Etiqueta")
-        self.top.geometry("350x300")
+        self.top.geometry("350x380") # <-- Se aumentó el alto
         self.top.configure(bg="#f2f2f2")
         self.top.grab_set()
 
@@ -167,9 +258,17 @@ class VentanaEditar:
         main_frame = tk.Frame(self.top, bg="#f2f2f2", padx=20, pady=20)
         main_frame.pack(fill="both", expand=True)
 
+        # Usamos getattr por si hay etiquetas viejas que aún no tienen el atributo 'tipo'
+        # CAMPO TIPO (Select Box / Combobox)
+        tk.Label(main_frame, text="Carpeta:", bg="#f2f2f2", font=("Segoe UI", 9)).pack(anchor="w")
+        tk.Label(main_frame, text=f"{getattr(etiqueta_obj, 'carpeta', '')}", bg="#f2f2f2", font=("Segoe UI", 9)).pack(anchor="w")
+        tk.Label(main_frame, text="Tipo:", bg="#f2f2f2", font=("Segoe UI", 9)).pack(anchor="w")
+        self.entry_tipo = ttk.Combobox(main_frame, font=("Segoe UI", 10), state="readonly")
+        self.entry_tipo['values'] = ("Vertical", "Horizontal")
+        self.entry_tipo.set(getattr(etiqueta_obj, 'tipo', "Vertical")) # Opción por defecto
+        self.entry_tipo.pack(fill="x", pady=(0, 10))
         self._crear_campo(main_frame, "Artículo:", "articulo", etiqueta_obj.articulo)
         self._crear_campo(main_frame, "Medida:", "medida", etiqueta_obj.medida)
-        # El campo cantidad en la DB suele ser numérico, pero permitimos texto en la UI
         self._crear_campo(main_frame, "Cantidad (Base de datos):", "cantidad", etiqueta_obj.cantidad)
 
         btns_frame = tk.Frame(main_frame, bg="#f2f2f2")
@@ -190,13 +289,13 @@ class VentanaEditar:
 
     def guardar(self):
         val_cantidad = self.entry_cantidad.get().strip()
-        # Intentamos convertir a int para la DB, si no, lo dejamos en 0 o manejamos el error
         try:
             cant_db = val_cantidad
         except:
             cant_db = 0
 
         nuevos_datos = {
+            "tipo": self.entry_tipo.get().strip(), # <-- AGREGADO
             "articulo": self.entry_articulo.get().strip(),
             "medida": self.entry_medida.get().strip(),
             "cantidad": cant_db
@@ -206,6 +305,7 @@ class VentanaEditar:
         try:
             exito = manager.modificar(self.etiqueta.id, **nuevos_datos)
             if exito:
+                self.etiqueta.tipo = nuevos_datos["tipo"] # <-- ACTUALIZACIÓN EN EL OBJETO
                 self.etiqueta.articulo = nuevos_datos["articulo"]
                 self.etiqueta.medida = nuevos_datos["medida"]
                 self.etiqueta.cantidad = nuevos_datos["cantidad"]
@@ -213,6 +313,68 @@ class VentanaEditar:
                 self.top.destroy()
         finally:
             manager.cerrar()
+
+# class VentanaEditar:
+#     """Ventana emergente para editar los detalles de una etiqueta"""
+#     def __init__(self, parent, etiqueta_obj, callback_actualizar):
+#         self.top = tk.Toplevel(parent)
+#         self.top.title("Editar Etiqueta")
+#         self.top.geometry("350x300")
+#         self.top.configure(bg="#f2f2f2")
+#         self.top.grab_set()
+
+#         self.etiqueta = etiqueta_obj
+#         self.callback_actualizar = callback_actualizar
+
+#         main_frame = tk.Frame(self.top, bg="#f2f2f2", padx=20, pady=20)
+#         main_frame.pack(fill="both", expand=True)
+
+#         self._crear_campo(main_frame, "Artículo:", "articulo", etiqueta_obj.articulo)
+#         self._crear_campo(main_frame, "Medida:", "medida", etiqueta_obj.medida)
+#         # El campo cantidad en la DB suele ser numérico, pero permitimos texto en la UI
+#         self._crear_campo(main_frame, "Cantidad (Base de datos):", "cantidad", etiqueta_obj.cantidad)
+
+#         btns_frame = tk.Frame(main_frame, bg="#f2f2f2")
+#         btns_frame.pack(fill="x", pady=(20, 0))
+
+#         tk.Button(btns_frame, text="GUARDAR", bg="#27ae60", fg="white", font=("Segoe UI", 9, "bold"),
+#                   relief="flat", padx=15, command=self.guardar).pack(side="left")
+        
+#         tk.Button(btns_frame, text="CANCELAR", bg="#7f8c8d", fg="white", font=("Segoe UI", 9, "bold"),
+#                   relief="flat", padx=15, command=self.top.destroy).pack(side="right")
+
+#     def _crear_campo(self, parent, label_text, attr_name, valor_inicial):
+#         tk.Label(parent, text=label_text, bg="#f2f2f2", font=("Segoe UI", 9)).pack(anchor="w")
+#         ent = tk.Entry(parent, font=("Segoe UI", 10))
+#         ent.insert(0, str(valor_inicial))
+#         ent.pack(fill="x", pady=(0, 10))
+#         setattr(self, f"entry_{attr_name}", ent)
+
+#     def guardar(self):
+#         val_cantidad = self.entry_cantidad.get().strip()
+#         # Intentamos convertir a int para la DB, si no, lo dejamos en 0 o manejamos el error
+#         try:
+#             cant_db = val_cantidad
+#         except:
+#             cant_db = 0
+
+#         nuevos_datos = {
+#             "articulo": self.entry_articulo.get().strip(),
+#             "medida": self.entry_medida.get().strip(),
+#             "cantidad": cant_db
+#         }
+
+#         manager = EtiquetaManager()
+#         try:
+#             exito = manager.modificar(self.etiqueta.id, **nuevos_datos)
+#             if exito:
+#                 self.etiqueta.articulo = nuevos_datos["articulo"]
+#                 self.etiqueta.medida = nuevos_datos["medida"]
+#                 self.etiqueta.cantidad = nuevos_datos["cantidad"]
+#                 self.callback_actualizar() 
+#                 self.top.destroy()
+#         finally:
+#             manager.cerrar()
 
 class InterfazEstricta:
     def __init__(self, root):
@@ -222,7 +384,6 @@ class InterfazEstricta:
         self.root.configure(bg="#f2f2f2")
 
         self.pdf_service = EtiquetaPDFService()
-        # Eliminamos vcmd porque ya no validamos solo números
         
         self.filas = [] 
         self.etiquetas_cache = [] 
@@ -341,7 +502,7 @@ class InterfazEstricta:
                              command=lambda: VentanaEditar(self.root, etiqueta_obj, self._ejecutar_busqueda))
         btn_edit.pack(side="left")
 
-        # --- NUEVO: BOTÓN VER PDF (OJO) ---
+        # --- BOTÓN VER PDF (OJO) ---
         def ver_pdf():
             service = EtiquetaPDFService()
             # Obtenemos la ruta del PDF. Si no existe, lo crea.
@@ -352,6 +513,41 @@ class InterfazEstricta:
                              relief="flat", cursor="hand2", borderwidth=0, width=4,
                              command=ver_pdf)
         btn_view.pack(side="left")
+
+        # --- BOTÓN ELIMINAR (TACHO ROJO) ---
+        def eliminar_etiqueta():
+            from tkinter import messagebox
+            from db_api import EtiquetaManager
+
+            confirmar = messagebox.askyesno(
+                "Confirmar eliminación",
+                f"¿Eliminar etiqueta?\n\n{etiqueta_obj.articulo} - {etiqueta_obj.medida}"
+            )
+
+            if confirmar:
+                db_api = EtiquetaManager()
+                db_api.eliminar(etiqueta_obj.id)
+                db_api.cerrar()
+
+                # refrescar búsqueda / lista
+                self.cargar_datos_iniciales()
+                self._ejecutar_busqueda()
+
+
+
+        btn_delete = tk.Button(
+            row,
+            text="🗑",
+            font=("Segoe UI", 11),
+            bg="white",
+            fg="#e74c3c",  # rojo moderno
+            relief="flat",
+            cursor="hand2",
+            borderwidth=0,
+            width=4,
+            command=eliminar_etiqueta
+        )
+        btn_delete.pack(side="left")
 
         # --- TEXTO ETIQUETA ---
         tk.Label(row, text=texto, anchor="w", font=("Segoe UI", 10), bg="white", fg="#333", padx=10).pack(side="left", fill="both", expand=True)
