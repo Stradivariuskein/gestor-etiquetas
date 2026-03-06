@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from db_api import EtiquetaManager
 from etiqueta_pdf_service import EtiquetaPDFService
+import re
 
 import fitz  # PyMuPDF
 from PIL import Image, ImageTk
@@ -570,18 +571,104 @@ class InterfazEstricta:
             etiqueta.cantidad_temp = ""
         self._ejecutar_busqueda()
 
+    # def imprimir_etiquetas_ingresadas(self):
+    #     lista_para_imprimir = []
+    #     for etiqueta in self.etiquetas_cache:
+    #         valor = etiqueta.cantidad_temp.strip()
+    #         if valor: # Si hay algo escrito (sea número o "2 kg")
+    #             # NOTA: Asegúrate que tu pdf_service soporte strings en la cantidad o extrae el número
+    #             lista_para_imprimir.append((etiqueta.id, valor))
+        
+    #     if not lista_para_imprimir: return
+        
+    #     self.pdf_service.imprimir_lista_etiquetas(lista_para_imprimir)
+    #     self.limpiar_todas_las_cantidades()
+
     def imprimir_etiquetas_ingresadas(self):
+        # import re  # Asegúrate de tener esto importado (puedes ponerlo arriba en tu archivo)
+        # from tkinter import messagebox
+
         lista_para_imprimir = []
+        elementos_visuales = []
+        total_hojas = 0
+
+        # 1. Recopilamos los datos de las etiquetas ingresadas
         for etiqueta in self.etiquetas_cache:
             valor = etiqueta.cantidad_temp.strip()
-            if valor: # Si hay algo escrito (sea número o "2 kg")
-                # NOTA: Asegúrate que tu pdf_service soporte strings en la cantidad o extrae el número
+            if valor:
                 lista_para_imprimir.append((etiqueta.id, valor))
+                
+                # Extraemos solo el número para sumar al total de hojas impresas
+                match = re.search(r'\d+', valor)
+                cantidad_num = int(match.group()) if match else 1
+                total_hojas += cantidad_num
+                
+                # Formato visual: [articulo] [medida] [cantidad]
+                elementos_visuales.append(f"{etiqueta.articulo} | {etiqueta.medida} | {valor} hojas")
+
+        # Si no hay nada seleccionado, avisamos y salimos
+        if not lista_para_imprimir:
+            messagebox.showwarning("Atención", "No hay etiquetas con cantidades ingresadas para imprimir.")
+            return
+
+        # 2. Creamos la ventana modal
+        modal = tk.Toplevel(self.root)
+        modal.title("Confirmar Impresión")
+        modal.geometry("450x500")
+        modal.configure(bg="#f2f2f2")
         
-        if not lista_para_imprimir: return
+        # Estas dos líneas son la magia para bloquear la ventana anterior
+        modal.transient(self.root) 
+        modal.grab_set() 
+
+        # 3. Interfaz del modal
+        tk.Label(modal, text="Resumen de impresión", font=("Segoe UI", 12, "bold"), bg="#f2f2f2", fg="#333").pack(pady=(15, 10))
+
+        # Contenedor para la lista con scrollbar
+        frame_lista = tk.Frame(modal)
+        frame_lista.pack(fill="both", expand=True, padx=20)
         
-        self.pdf_service.imprimir_lista_etiquetas(lista_para_imprimir)
-        self.limpiar_todas_las_cantidades()
+        scrollbar = ttk.Scrollbar(frame_lista, orient="vertical")
+        scrollbar.pack(side="right", fill="y")
+        
+        listbox = tk.Listbox(frame_lista, yscrollcommand=scrollbar.set, font=("Segoe UI", 10), selectbackground="#34495e")
+        for item in elementos_visuales:
+            listbox.insert(tk.END, item)
+        listbox.pack(side="left", fill="both", expand=True)
+        scrollbar.config(command=listbox.yview)
+
+        # Label con el total de hojas
+        tk.Label(modal, text=f"Total de hojas: {total_hojas}", font=("Segoe UI", 12, "bold"), bg="#f2f2f2", fg="#2980b9").pack(pady=(15, 10))
+
+        # Contenedor para los botones
+        frame_botones = tk.Frame(modal, bg="#f2f2f2")
+        frame_botones.pack(pady=(0, 20))
+
+        # 4. Funciones de los botones
+        def confirmar():
+            # Ejecutamos la impresión real, limpiamos y cerramos modal
+            self.pdf_service.imprimir_lista_etiquetas(lista_para_imprimir)
+            self.limpiar_todas_las_cantidades()
+            modal.destroy()
+
+        def cancelar():
+            # Solo cerramos el modal
+            modal.destroy()
+
+        # Botones Aceptar y Cancelar (usando los mismos estilos de tu UI)
+        btn_aceptar = tk.Button(frame_botones, text="ACEPTAR", command=confirmar, 
+                                font=("Segoe UI", 10, "bold"), bg="#27ae60", fg="white", 
+                                relief="raised", borderwidth=1, padx=20, pady=5, cursor="hand2")
+        btn_aceptar.pack(side="left", padx=10)
+
+        btn_cancelar = tk.Button(frame_botones, text="CANCELAR", command=cancelar, 
+                                 font=("Segoe UI", 10, "bold"), bg="#e74c3c", fg="white", 
+                                 relief="raised", borderwidth=1, padx=20, pady=5, cursor="hand2")
+        btn_cancelar.pack(side="right", padx=10)
+
+        # Hacemos que la ventana espere y tome el foco
+        modal.focus_set()
+        self.root.wait_window(modal)
 
     def _on_mousewheel(self, event):
         self.canvas.yview_scroll(int(-event.delta / 120), "units")
