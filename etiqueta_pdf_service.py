@@ -310,14 +310,11 @@ class EtiquetaPDFService:
 
 
     def imprimir_lista_etiquetas(
-        self,
-        etiquetas,
-        sumatra_path="SumatraPDF.exe"
-    ):
-        """
-        etiquetas: lista de tuplas (etiqueta_id, cantidad_hojas)
-        Se imprime en un hilo separado para no congelar la UI.
-        """
+            self,
+            etiquetas,
+            sumatra_path="SumatraPDF.exe",
+            on_finish=None
+        ):
         if not etiquetas:
             return
 
@@ -330,13 +327,15 @@ class EtiquetaPDFService:
                         sumatra_path=sumatra_path
                     )
                 except Exception as e:
-                    print(
-                        f"Error imprimiendo etiqueta {etiqueta_id}: {e}"
-                    )
+                    print(f"Error imprimiendo etiqueta {etiqueta_id}: {e}")
+            
+            # --- Simplemente ejecutamos el callback si existe ---
+            if on_finish:
+                on_finish() 
 
         threading.Thread(
             target=_worker,
-            daemon=True   # mata el hilo al cerrar la app
+            daemon=True
         ).start()
 if __name__ == "__main__":
     pdf_service = EtiquetaPDFService()
