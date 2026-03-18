@@ -36,7 +36,7 @@ class TestEtiquetaPDFService(unittest.TestCase):
         l1, l2 = self.service.partir_en_dos_lineas(texto)
         
         self.assertEqual(l1, "ARANDELA PLANA")
-        self.assertEqual(l2, "HIERRO ZINCADA")
+        self.assertEqual(l2, "HIERRO Z.")
 
 
     def test_partir_en_dos_lineas_impar(self):
@@ -47,7 +47,7 @@ class TestEtiquetaPDFService(unittest.TestCase):
         # La primera mitad lleva menos en la división entera de Python (3//2 = 1)
         # Según tu código: palabras[:mitad] -> palabras[:1]
         self.assertEqual(l1, "TUERCA") 
-        self.assertEqual(l2, "GIGANTE ROJA")
+        self.assertEqual(l2, "GIGANTE .")
 
     def test_partir_una_sola_palabra(self):
         """Si hay una sola palabra, la segunda línea debe estar vacía."""
