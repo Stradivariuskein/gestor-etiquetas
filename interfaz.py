@@ -461,9 +461,8 @@ class InterfazEstricta:
         manager = EtiquetaManager()
         try:
             raw_etiquetas = manager.listar_todas()
-            self.etiquetas_cache = sorted(
-                raw_etiquetas, key=lambda e: f"{e.articulo} {e.medida}".lower()
-            )
+            self.etiquetas_cache = raw_etiquetas
+            
             for e in self.etiquetas_cache:
                 e.cantidad_temp = ""
             self.etiquetas_cargadas = 0

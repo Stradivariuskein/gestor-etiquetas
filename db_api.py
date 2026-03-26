@@ -32,7 +32,7 @@ class EtiquetaManager:
     def listar_todas(self):
         """Devuelve todas las etiquetas en la base de datos."""
         print(f"listando todas") #borrar
-        return self.session.query(Etiqueta).all()
+        return self.session.query(Etiqueta).order_by(Etiqueta.carpeta).all()
 
     # 2. CREAR
     def crear(self, articulo, medida, cantidad, carpeta="", tipo="vertical"):
